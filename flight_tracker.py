@@ -488,6 +488,34 @@ def generate_report(flight_data, depart_date, return_date):
     return "\n".join(lines)
 
 
+# ── Public interface (used by web app) ────────────────────────────────────────
+
+def run_search(depart_date, return_date, max_price=None):
+    """Run the full search and return structured data for web or CLI callers."""
+    rapidapi_key = os.getenv("RAPIDAPI_KEY", "").strip()
+    _load_entity_cache()
+
+    temps = get_temperatures(EUROPEAN_CITIES)
+
+    filtered, warm = [], []
+    for city in EUROPEAN_CITIES:
+        temp = temps.get(city["name"])
+        if temp is None:
+            continue
+        if temp < TEMP_THRESHOLD:
+            filtered.append({**city, "temp": temp})
+        else:
+            warm.append({**city, "temp": temp})
+
+    flight_data = []
+    if filtered:
+        flight_data = collect_flight_data(
+            filtered, depart_date, return_date, max_price, rapidapi_key
+        )
+
+    return {"filtered": filtered, "warm": warm, "flight_data": flight_data}
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main():

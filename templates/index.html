@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flight Price Tracker — Delhi to Europe</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <div class="hero">
+    <div class="hero-content">
+      <div class="logo">✈</div>
+      <h1>Flight Price Tracker</h1>
+      <p class="subtitle">Find the cheapest flights from <strong>Delhi</strong> to Europe<br>Only shows destinations below <strong>25°C</strong></p>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="search-card">
+      <h2>Search Flights</h2>
+
+      <form action="/search" method="POST" id="search-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="depart_date">Departure Date</label>
+            <input type="date" id="depart_date" name="depart_date"
+                   value="{{ default_depart }}" min="{{ today }}" required>
+          </div>
+          <div class="form-group">
+            <label for="return_date">Return Date</label>
+            <input type="date" id="return_date" name="return_date"
+                   value="{{ default_return }}" min="{{ today }}" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="max_price">Max Budget (INR) <span class="optional">— optional</span></label>
+          <input type="number" id="max_price" name="max_price"
+                 placeholder="e.g. 80000" min="1000" step="1000">
+        </div>
+
+        <button type="submit" class="btn-search" id="search-btn">
+          <span id="btn-text">Search Flights</span>
+          <span id="btn-spinner" class="hidden">Searching…</span>
+        </button>
+      </form>
+
+      <div class="sources">
+        <span>Data from:</span>
+        <span class="source-tag">Skyscanner</span>
+        <span class="source-tag">Airhob</span>
+        <span class="source-tag">Open-Meteo weather</span>
+      </div>
+    </div>
+
+    <div class="how-it-works">
+      <h3>How it works</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">Checks live temperatures for 28 European cities</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">Filters out cities above 25°C</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">Searches real flight prices via Skyscanner &amp; Airhob</div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-text">Shows you the best deals ranked by price</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading overlay -->
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <h3>Searching for deals…</h3>
+      <p>Checking 28 cities and fetching live prices.<br>This takes about 60–90 seconds.</p>
+      <div class="loading-steps">
+        <div class="loading-step active" id="ls1">🌡 Checking temperatures</div>
+        <div class="loading-step" id="ls2">✈ Fetching flight prices</div>
+        <div class="loading-step" id="ls3">📊 Building your report</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form    = document.getElementById('search-form');
+    const overlay = document.getElementById('loading-overlay');
+    const btnText = document.getElementById('btn-text');
+    const btnSpinner = document.getElementById('btn-spinner');
+
+    // Keep return date >= depart date
+    document.getElementById('depart_date').addEventListener('change', function () {
+      const ret = document.getElementById('return_date');
+      if (ret.value && ret.value < this.value) {
+        const d = new Date(this.value);
+        d.setDate(d.getDate() + 7);
+        ret.value = d.toISOString().split('T')[0];
+      }
+      ret.min = this.value;
+    });
+
+    form.addEventListener('submit', function () {
+      overlay.classList.remove('hidden');
+      btnText.classList.add('hidden');
+      btnSpinner.classList.remove('hidden');
+
+      // Animate loading steps
+      setTimeout(() => {
+        document.getElementById('ls1').classList.remove('active');
+        document.getElementById('ls1').classList.add('done');
+        document.getElementById('ls2').classList.add('active');
+      }, 8000);
+      setTimeout(() => {
+        document.getElementById('ls2').classList.remove('active');
+        document.getElementById('ls2').classList.add('done');
+        document.getElementById('ls3').classList.add('active');
+      }, 70000);
+    });
+  </script>
+
+</body>
+</html>

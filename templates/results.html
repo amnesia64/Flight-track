@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flight Results — Delhi to Europe</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <div class="results-header">
+    <div class="container">
+      <a href="/" class="back-link">← New Search</a>
+      <h1>✈ Flight Results</h1>
+      <p class="search-params">
+        Delhi (DEL) → Europe &nbsp;|&nbsp;
+        {{ depart_date }} – {{ return_date }}
+        {% if max_price %}&nbsp;|&nbsp; Budget: ₹{{ "{:,}".format(max_price) }}{% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- Summary banner -->
+    {% if stats %}
+    <div class="summary-banner">
+      <div class="stat-box">
+        <div class="stat-value">{{ stats.priced_count }}</div>
+        <div class="stat-label">Destinations found</div>
+      </div>
+      <div class="stat-box highlight">
+        <div class="stat-value">{{ stats.cheapest.price_formatted }}</div>
+        <div class="stat-label">Cheapest flight to {{ stats.cheapest.city }}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">₹{{ "{:,}".format(stats.avg_inr) }}</div>
+        <div class="stat-label">Average price</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">{{ cold_count }}</div>
+        <div class="stat-label">Cities below 25°C</div>
+      </div>
+    </div>
+    {% else %}
+    <div class="no-results">
+      <p>⚠️ Could not fetch prices. Check your <code>RAPIDAPI_KEY</code> in <code>.env</code> and try again.</p>
+      <a href="/" class="btn-search" style="display:inline-block;margin-top:1rem;">Try Again</a>
+    </div>
+    {% endif %}
+
+    <!-- Ranked deals table -->
+    {% if sorted_data %}
+    <div class="section">
+      <h2>All Destinations — Ranked by Price</h2>
+      <div class="table-wrap">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Destination</th>
+              <th>Temp</th>
+              <th>Price (INR)</th>
+              <th>Price (EUR ~)</th>
+              <th>Airline</th>
+              <th>Duration</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in sorted_data %}
+            <tr class="{{ 'best-row' if loop.index == 1 and d.price_inr else '' }}">
+              <td class="rank">
+                {% if loop.index == 1 and d.price_inr %}🏆{% else %}{{ loop.index }}{% endif %}
+              </td>
+              <td class="city-cell">
+                <strong>{{ d.city }}</strong>
+                <span class="iata-badge">{{ d.iata }}</span>
+              </td>
+              <td>
+                <span class="temp-badge {{ 'cold' if d.temperature_c < 10 else 'mild' if d.temperature_c < 18 else 'warm' }}">
+                  {{ d.temperature_c }}°C
+                </span>
+              </td>
+              <td class="price-cell">
+                {% if d.price_inr %}
+                  <strong>{{ d.price_formatted }}</strong>
+                {% else %}
+                  <span class="na">N/A</span>
+                {% endif %}
+              </td>
+              <td class="eur-cell">
+                {% if d.price_inr %}
+                  ~€{{ "{:,}".format((d.price_inr / eur_per_inr) | int) }}
+                {% else %}—{% endif %}
+              </td>
+              <td>{{ d.airline }}</td>
+              <td>{{ d.flight_duration or "N/A" }}</td>
+              <td>
+                <span class="source-tag small">{{ d.data_source }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Top 3 picks -->
+    {% if top_picks %}
+    <div class="section">
+      <h2>⭐ Top 3 Best-Value Picks</h2>
+      <div class="picks-grid">
+        {% for d in top_picks %}
+        <div class="pick-card {{ 'gold' if loop.index == 1 else '' }}">
+          <div class="pick-rank">
+            {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% else %}🥉{% endif %}
+          </div>
+          <h3>{{ d.city }} <span class="iata-badge">{{ d.iata }}</span></h3>
+          <div class="pick-price">{{ d.price_formatted }}
+            <span class="eur-sub">~€{{ "{:,}".format((d.price_inr / eur_per_inr) | int) }}</span>
+          </div>
+          <div class="pick-temp">
+            <span class="temp-badge {{ 'cold' if d.temperature_c < 10 else 'mild' if d.temperature_c < 18 else 'warm' }}">
+              {{ d.temperature_c }}°C
+            </span>
+            via {{ d.airline }}
+          </div>
+          <p class="pick-vibe">{{ d.vibe }}</p>
+          <p class="pick-tip">💡 Search DEL → {{ d.iata }} on Skyscanner's "Cheapest month" view for even better dates.</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Best for traveler type -->
+    {% if best_for %}
+    <div class="section">
+      <h2>Best For Different Travelers</h2>
+      <div class="traveler-grid">
+        {% for label, d in best_for.items() %}
+        <div class="traveler-card">
+          <div class="traveler-icon">
+            {% if "Budget" in label %}💰{% elif "Culture" in label %}🏛{% else %}🌲{% endif %}
+          </div>
+          <h4>{{ label }}</h4>
+          <div class="traveler-city">{{ d.city }}</div>
+          <div class="traveler-price">{{ d.price_formatted if d.price_inr else "Check manually" }}</div>
+          <p>{{ d.vibe }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Booking tip -->
+    <div class="section tip-box">
+      <h2>💡 Booking Tip</h2>
+      <p>Use <strong>Skyscanner's "Cheapest month" grid</strong> to find the best date combination around your window.</p>
+      <p>From Delhi, <strong>IndiGo, Air India, Emirates</strong> and <strong>Qatar Airways</strong> often have the best fares to European hubs.</p>
+      <p>Flying into <strong>Amsterdam, Lisbon, or Prague</strong> is usually cheapest — then hop onward with <strong>Ryanair</strong> or <strong>Wizz Air</strong> for €10–30.</p>
+    </div>
+
+    <!-- Data sources -->
+    <div class="footer-note">
+      <p>Data sources: <strong>Open-Meteo</strong> (weather) &nbsp;|&nbsp; <strong>{{ skyscanner_host }}</strong> &nbsp;|&nbsp; <strong>{{ airhob_host }}</strong></p>
+      <p>Prices are indicative — always confirm on the airline or booking site before purchasing.</p>
+      <a href="/" class="btn-search" style="display:inline-block;margin-top:1rem;">🔍 Search Again</a>
+    </div>
+
+  </div>
+
+</body>
+</html>
